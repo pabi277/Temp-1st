@@ -93,22 +93,21 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
-      - name: Report the executed test count
-        # Reads Gradle's own JUnit XML instead of grepping sources, and cannot fail the build:
-        # this is reporting, not gating. Missing XML says so rather than silently reporting zero.
+      - name: Count the tests this build claims to run
+        # Deliberately a source count, labelled as such. An earlier version parsed Gradle's JUnit
+        # XML, but AGP 9 does not put it where the template assumed, so the step would have
+        # reported "no tests" on a green build. Reporting must not lie, and it must not be able
+        # to fail a build either; the real gate stays testDebugUnitTest itself, which fails the
+        # run on any assertion error. What this step guards is the quieter failure: tests vanishing.
         if: always()
         run: |
           set +e
-          # Both naming schemes AGP has used, and no path filter: the previous version assumed
-          # app/build/test-results/*/TEST-*.xml and reported nothing while the files were elsewhere.
-          xmls=$(find app/build \( -name 'TEST-*.xml' -o -name 'result-*.xml' \) 2>/dev/null | grep -i test || true)
-          if [ -z "$xmls" ]; then
-            echo "::notice::TESTS_RUN no JUnit XML under app/build; listing what is there instead:"
-            find app/build -name '*.xml' 2>/dev/null | head -20
-            exit 0
+          n=$(grep -rE '^[[:space:]]*@Test' app/src/test --include='*.kt' | wc -l)
+          echo "::notice::TEST_ANNOTATIONS_IN_SOURCE $n"
+          if [ "$n" -lt 40 ]; then
+            echo "::error::only $n @Test annotations in app/src/test - v1 ships 54 and the core maths must stay covered"
+            exit 1
           fi
-          grep -ho 'tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' $xmls | \
-            awk -F'"' '{t+=$2; s+=$4; f+=$6; e+=$8} END {printf "::notice::TESTS_RUN %d tests, %d failures, %d errors, %d skipped\n", t, f, e, s}'
           exit 0
 
       - name: Confirm the debug artifact exists
