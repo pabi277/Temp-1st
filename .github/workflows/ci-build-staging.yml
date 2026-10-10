@@ -112,9 +112,12 @@ jobs:
         if: always()
         run: |
           set +e
-          xmls=$(find app/build -name 'TEST-*.xml' -path '*test*' 2>/dev/null)
+          # Both naming schemes AGP has used, and no path filter: the previous version assumed
+          # app/build/test-results/*/TEST-*.xml and reported nothing while the files were elsewhere.
+          xmls=$(find app/build \( -name 'TEST-*.xml' -o -name 'result-*.xml' \) 2>/dev/null | grep -i test || true)
           if [ -z "$xmls" ]; then
-            echo "::notice::TESTS_RUN no JUnit XML found under app/build - test task did not run or the path changed"
+            echo "::notice::TESTS_RUN no JUnit XML under app/build; listing what is there instead:"
+            find app/build -name '*.xml' 2>/dev/null | head -20
             exit 0
           fi
           grep -ho 'tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' $xmls | \
