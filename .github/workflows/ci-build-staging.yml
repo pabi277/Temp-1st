@@ -58,9 +58,31 @@ jobs:
           grep -q "build-tools;36.0.0" /tmp/installed.txt
 
       - name: Run unit tests and build debug APK
+        # The gradle command matches templates/ci-build.yml exactly; tee exists only so the
+        # failure step below can publish the log to a sandbox that cannot download Actions logs.
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon testDebugUnitTest assembleDebug
+          ./gradlew --no-daemon testDebugUnitTest assembleDebug 2>&1 | tee /tmp/gradle.log
+
+      - name: Publish installable debug APK
+        if: success()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: mess-bill-check-debug-apk
+          path: apps/mess-bill-check/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish the build log tail when the build failed
+        if: failure()
+        run: |
+          set +e
+          printf '::error::LOG_BYTES %s\n' "$(wc -c < /tmp/gradle.log 2>/dev/null || echo 0)"
+          tail -c 9000 /tmp/gradle.log 2>/dev/null | tr -d '\000-\010' | gzip -9 | base64 -w0 > /tmp/log.b64g
+          fold -w850 /tmp/log.b64g | head -6 | nl -ba | while IFS=$'\t' read -r n body; do
+            printf '::error::GZ%02d %s\n' "$n" "$body"
+          done
+          exit 0
 
       - name: Confirm the debug artifact exists
         run: |
