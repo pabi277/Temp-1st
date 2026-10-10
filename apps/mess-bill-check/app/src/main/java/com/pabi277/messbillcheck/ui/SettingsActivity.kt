@@ -7,8 +7,8 @@ import android.text.InputType
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.RadioButton
-import android.widget.RadioGroup
 import android.view.View
+import android.widget.RadioGroup
 import com.pabi277.messbillcheck.R
 import com.pabi277.messbillcheck.core.BillRounding
 import com.pabi277.messbillcheck.core.Billing
@@ -105,31 +105,31 @@ class SettingsActivity : ScreenActivity() {
                 return@button
             }
             val rebateDays = rebate.text.toString().toIntOrNull()?.coerceAtLeast(0) ?: 0
-            val basis = RateBasis.values().firstOrNull { it.name == basis.selected() } ?: d.basis
-            val rounding = BillRounding.values().firstOrNull { it.name == rounding.selected() } ?: d.rounding
+            val chosenBasis = RateBasis.values().firstOrNull { it.name == basis.selected() } ?: d.basis
+            val chosenRounding = BillRounding.values().firstOrNull { it.name == rounding.selected() } ?: d.rounding
             val pickedLanguage = language.selected() ?: Prefs.language(this)
-            Prefs.setLanguage(this, pickedLanguage)
-            val languageSelectedAtOpen = Prefs.language(this)
             val active = LedgerHost.activePeriod(l)
             store.mutate { current ->
                 var next = LedgerEdits.setDefaults(
-                    current, Defaults(newRate, basis, rebateDays, rounding, memberCount, language)
+                    current,
+                    Defaults(newRate, chosenBasis, rebateDays, chosenRounding, memberCount, pickedLanguage)
                 )
                 if (active != null && !active.closed) {
                     next = next.copy(
                         periods = next.periods.map {
                             if (it.id == active.id) it.copy(
-                                rateMinor = newRate, basis = basis, rebateMinDays = rebateDays,
-                                rounding = rounding, memberCount = memberCount
+                                rateMinor = newRate, basis = chosenBasis, rebateMinDays = rebateDays,
+                                rounding = chosenRounding, memberCount = memberCount
                             ) else it
                         }
                     )
                 }
                 next
             }
+            // Record first, then flip the locale: a language change rebuilds the activity.
+            Prefs.setLanguage(this, pickedLanguage)
             toast(getString(R.string.set_saved))
-            // A locale change has to rebuild the whole activity, not just its content.
-            if (pickedLanguage != languageSelectedAtOpen) recreate() else render()
+            if (pickedLanguage != AppLocale.currentTag(this@SettingsActivity)) recreate() else render()
         })
 
         col.addView(heading(getString(R.string.set_export_csv)))

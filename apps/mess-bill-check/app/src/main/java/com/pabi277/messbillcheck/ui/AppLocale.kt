@@ -1,29 +1,27 @@
-cat > ui/LedgerHost.kt <<'EOF'
 package com.pabi277.messbillcheck.ui
 
 import android.content.Context
-import com.pabi277.messbillcheck.core.Ledger
-import com.pabi277.messbillcheck.core.LedgerStore
-import java.io.File
+import android.content.res.Configuration
+import java.util.Locale
 
-/** One store per process. Files live in app-private storage, so no permission is needed. */
-object LedgerHost {
+/**
+ * In-app language switch (EN / हिन्दी / বাংলা) with no settings-app hop and no restart prompt.
+ * The tag comes from ui/Prefs, not from the ledger, so a corrupt data file can never make the
+ * interface unreadable.
+ */
+object AppLocale {
 
-    @Volatile
-    private var store: LedgerStore? = null
+    val supported = listOf("en", "hi", "bn")
 
-    fun store(context: Context): LedgerStore {
-        val dir = context.applicationContext.filesDir
-        return store ?: synchronized(this) {
-            store ?: LedgerStore(File(dir, "data")).also { store = it }
-        }
+    fun wrap(base: Context, tag: String): Context {
+        val locale = if (tag in supported) Locale(tag) else Locale.getDefault()
+        val config = Configuration(base.resources.configuration)
+        config.setLocale(locale)
+        return base.createConfigurationContext(config)
     }
 
-    fun resetForTests() {
-        synchronized(this) { store = null }
+    fun currentTag(context: Context): String {
+        val locales = context.resources.configuration.locales
+        return if (locales.isEmpty) "en" else locales[0].language
     }
-
-    /** The period the user is working in: the newest open one, else the newest of any. */
-    fun activePeriod(l: Ledger) = l.periods.filterNot { it.closed }.maxByOrNull { it.endDay }
-        ?: l.periods.maxByOrNull { it.endDay }
 }

@@ -53,37 +53,51 @@ object SaveFiles {
         return Saved("Download/$name")
     }
 
-    /** Text-only PDF, A4 portrait at ~144 dpi, paginating on overflow. No third-party PDF library. */
+    /**
+     * Text-only PDF, A4 portrait in PostScript points (1/72"), paginating on overflow. No
+     * third-party PDF library, so there is no extra licence or Data Safety line to keep honest.
+     * The framework builder is `create()`, and `finishPage` takes the Page, not its Canvas.
+     */
     fun renderPdf(lines: List<String>): ByteArray {
-        val pageW = 1190
-        val pageH = 1684
-        val margin = 72f
-        val leading = 44f
+        val pageW = 595
+        val pageH = 842
+        val margin = 36f
+        val leading = 15f
         val doc = PdfDocument()
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.BLACK
-            textSize = 30f
+            textSize = 10.5f
         }
-        val bold = Paint(paint).apply { isFakeBoldText = true }
-        var page = 1
-        var y = margin + 30f
-        var info = PdfDocument.PageInfo.Builder(pageW, pageH, page).build()
-        var canvas = doc.startPage(info).canvas
+        val bold = Paint(paint).apply {
+            isFakeBoldText = true
+            textSize = 11.5f
+        }
+        val small = Paint(paint).apply {
+            color = Color.DKGRAY
+            textSize = 8.5f
+        }
+        var pageNumber = 1
+        var page = doc.startPage(PdfDocument.PageInfo.Builder(pageW, pageH, pageNumber).create())
+        var y = margin + 12f
         for (raw in lines) {
             val line = raw.replace("\t", "  ")
             if (y > pageH - margin) {
-                doc.finishPage(canvas)
-                page += 1
-                info = PdfDocument.PageInfo.Builder(pageW, pageH, page).build()
-                canvas = doc.startPage(info).canvas
-                y = margin + 30f
+                doc.finishPage(page)
+                pageNumber += 1
+                page = doc.startPage(PdfDocument.PageInfo.Builder(pageW, pageH, pageNumber).create())
+                y = margin + 12f
             }
-            val isHeading = line.isNotBlank() && !line.startsWith(" ") && !line.startsWith("!") &&
-                !line.contains("  ") && line.length < 40
-            canvas.drawText(line, margin, y, if (isHeading) bold else paint)
+            val paint = when {
+                line.startsWith("!") -> small
+                line.startsWith(" ") -> small
+                line.isBlank() -> paint
+                line.length < 40 && !line.contains("  ") -> bold
+                else -> paint
+            }
+            page.canvas.drawText(line, margin, y, paint)
             y += leading
         }
-        doc.finishPage(canvas)
+        doc.finishPage(page)
         val out = ByteArrayOutputStream()
         doc.writeTo(out)
         doc.close()
