@@ -64,6 +64,28 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon testDebugUnitTest assembleDebug 2>&1 | tee /tmp/gradle.log
 
+      - name: Prove the built APK asks for nothing
+        # Verifies the privacy claim against the artifact, not the source: a manifest
+        # edit that adds INTERNET or an SDK would pass every unit test and still betray
+        # the "no network, no login" promise, so the built APK is inspected here.
+        if: success()
+        run: |
+          set -euo pipefail
+          apk=$(find app/build/outputs/apk/debug -name '*.apk' | head -1)
+          test -n "$apk"
+          aapt2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | head -1)
+          "$aapt2" dump badging "$apk" > /tmp/badging.txt
+          grep -E "^package: name='com\.pabi277\.messbillcheck' versionCode='1' versionName='0\.1\.0'" /tmp/badging.txt
+          grep -E "^sdkVersion:'24'" /tmp/badging.txt
+          grep -E "^targetSdkVersion:'36'" /tmp/badging.txt
+          grep -E "^launchable-activity: name='com\.pabi277\.messbillcheck\.ui\.TodayActivity'" /tmp/badging.txt
+          if grep -q "android\.permission" /tmp/badging.txt; then
+            echo "::error::the built APK declares a permission; v1 must declare none"
+            grep "android\.permission" /tmp/badging.txt
+            exit 1
+          fi
+          printf '::notice::APK_BADGING zero permissions, min24/target36, launchable=ui.TodayActivity - verified on the artifact\n'
+
       - name: Publish installable debug APK
         if: success()
         uses: actions/upload-artifact@v7.0.2
