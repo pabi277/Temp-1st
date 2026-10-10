@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: MIT
+# STAGING copy of the app repo's frozen templates/ci-build.yml, because the app
+# repository cannot be created yet (the session token has no Administration write).
+# Three deliberate, visible differences from the frozen template:
+#   1. working-directory points at apps/mess-bill-check (the app is nested here),
+#   2. the Android SDK components are installed explicitly (AGP 9.4.0 requires
+#      Build Tools 36.0.0 and compileSdk 36, and "latest" on a runner is not 36),
+#   3. the signed-release job is NOT run: the owner has not created the four
+#      ANDROID_KEYSTORE_* secrets, and the frozen workflow must fail without them.
+# The authoritative file remains apps/mess-bill-check/.github/workflows/ci-build.yml.
+name: Android CI (staging)
+
+on:
+  push:
+    branches: ['arena/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-ci-staging-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: apps/mess-bill-check
+
+jobs:
+  test:
+    name: Unit tests and debug build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install required SDK components
+        run: yes | sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+      - name: Run unit tests and build debug APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon testDebugUnitTest assembleDebug

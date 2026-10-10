@@ -1,0 +1,18 @@
+# Gradle / Android build outputs
+.gradle/
+build/
+local.properties
+captures/
+*.hprof
+
+# IDE
+.idea/
+*.iml
+.kotlin/
+
+# Signing material must never be committed
+*.jks
+*.keystore
+*.pk8
+keystore.properties
+secrets/

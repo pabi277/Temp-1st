@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<resources>
+    <!-- Replace all YOUR_* placeholders before shipping. -->
+    <string name="licenses_screen_title">Licenses and credits</string>
+    <string name="app_license_summary">YOUR_APP_NAME is licensed under YOUR_APP_LICENSE.</string>
+    <string name="app_copyright_notice">Copyright © YOUR_YEAR YOUR_COPYRIGHT_HOLDER.</string>
+    <string name="third_party_credits_intro">This app includes the third-party software and assets listed below.</string>
+    <string name="third_party_credits_content">YOUR_THIRD_PARTY_CREDITS</string>
+    <string name="privacy_policy_title">Privacy policy</string>
+    <string name="privacy_policy_url">YOUR_PUBLIC_PRIVACY_POLICY_URL</string>
+</resources>

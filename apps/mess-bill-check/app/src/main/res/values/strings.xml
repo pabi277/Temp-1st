@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mess Bill Check</string>
+    <!-- P2 skeleton string. Real EN/HI/BN strings land in P3 with the owner's
+         native-review pass; untranslated keys must never ship in a release AAB. -->
+    <string name="skeleton_notice">Skeleton build — no features yet.</string>
+</resources>
