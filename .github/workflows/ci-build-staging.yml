@@ -114,3 +114,7 @@ jobs:
           # logs or artifacts, and the hash is the cheapest way to prove which APK
           # a run produced.
           sha256sum app/build/outputs/apk/debug/*.apk | awk '{ print "::notice::APK_SHA256 " $1 " (" $2 ")" }'
+          # Executed-test count straight from JUnit XML, so the gate is reported, not assumed.
+          grep -ho 'tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' \
+            app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | \
+            awk -F'"' '{t+=$2; s+=$4; f+=$6; e+=$8} END {printf "::notice::TESTS_RUN %d tests, %d failures, %d errors, %d skipped\n", t, f, e, s}'

@@ -88,7 +88,7 @@ the trade is that the user finds the file in `Download/` rather than in a shared
 ## D-010 — verification is compile-and-unit-test only
 
 There is no emulator or Android SDK in the environment that built this, so per RULES.md 11 the
-only gate is CI: `testDebugUnitTest` (34 tests over the pure-Kotlin core) plus `assembleDebug`.
+only gate is CI: `testDebugUnitTest` (54 tests over the pure-Kotlin core) plus `assembleDebug`.
 The five screens have therefore never been drawn, no tap has ever been simulated, and
 localisation has not been read by a speaker. Before the first Play track, someone must walk
 §「manual checklist」of the plan on a real device, including the permission dialog path for
