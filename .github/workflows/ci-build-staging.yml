@@ -10,8 +10,7 @@
 #      loudly instead of surfacing as an opaque Gradle error;
 #   4. the signed-release job is NOT run: the four ANDROID_KEYSTORE_* secrets do not
 #      exist yet and the frozen workflow must fail without them;
-#   5. a temporary diagnostic re-emits the Gradle failure as check-run annotations,
-#      because Actions logs cannot be downloaded from this sandbox.
+#   5. the debug APK's SHA-256 is published as a notice annotation.
 name: Android CI (staging)
 
 on:
@@ -60,24 +59,14 @@ jobs:
 
       - name: Run unit tests and build debug APK
         run: |
-          # GHA's default shell is `bash -e`, which is why the previous two runs
-          # produced no diagnostic annotations: the script aborted at the failing
-          # pipeline before reaching them. errexit must be off for this step.
-          set +e
-          set -o pipefail
           chmod +x ./gradlew
-          ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDebug 2>&1 | tee /tmp/gradle.log
-          rc=${PIPESTATUS[0]}
-          set -e
-          printf '::error::LOG_BYTES %s CHARS\n' "$(wc -c < /tmp/gradle.log)"
-          tail -c 9000 /tmp/gradle.log | tr -d '\000-\010' | gzip -9 | base64 -w0 > /tmp/log.b64g
-          printf '::error::GZ_TOTAL %s\n' "$(wc -c < /tmp/log.b64g)"
-          fold -w850 /tmp/log.b64g | head -6 | nl -ba | while IFS=$'\t' read -r n body; do
-            printf '::error::GZ%02d %s\n' "$n" "$body"
-          done
-          exit "$rc"
+          ./gradlew --no-daemon testDebugUnitTest assembleDebug
 
       - name: Confirm the debug artifact exists
         run: |
           set -euo pipefail
           find app/build/outputs/apk/debug -name "*.apk" -size +10k -print
+          # Checksum as a notice annotation: this sandbox cannot download Actions
+          # logs or artifacts, and the hash is the cheapest way to prove which APK
+          # a run produced.
+          sha256sum app/build/outputs/apk/debug/*.apk | awk '{ print "::notice::APK_SHA256 " $1 " (" $2 ")" }'
