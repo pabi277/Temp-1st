@@ -93,16 +93,27 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+      - name: Report the executed test count
+        # Reads Gradle's own JUnit XML instead of grepping sources, and cannot fail the build:
+        # this is reporting, not gating. Missing XML says so rather than silently reporting zero.
+        if: always()
+        run: |
+          set +e
+          xmls=$(find app/build -name 'TEST-*.xml' -path '*test*' 2>/dev/null)
+          if [ -z "$xmls" ]; then
+            echo "::notice::TESTS_RUN no JUnit XML found under app/build - test task did not run or the path changed"
+            exit 0
+          fi
+          grep -ho 'tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' $xmls | \
+            awk -F'"' '{t+=$2; s+=$4; f+=$6; e+=$8} END {printf "::notice::TESTS_RUN %d tests, %d failures, %d errors, %d skipped\n", t, f, e, s}'
+          exit 0
+
       - name: Confirm the debug artifact exists
         if: success()
         run: |
           set -euo pipefail
           find app/build/outputs/apk/debug -name "*.apk" -size +10k -print
           sha256sum app/build/outputs/apk/debug/*.apk | awk '{ print "::notice::APK_SHA256 " $1 " (" $2 ")" }'
-          # Test counts come from JUnit XML so the gate is reported, not assumed.
-          grep -ho 'tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' \
-            app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | \
-            awk -F'"' '{t+=$2; s+=$4; f+=$6; e+=$8} END {printf "::notice::TESTS_RUN %d tests, %d failures, %d errors, %d skipped\n", t, f, e, s}'
 
   signed-release:
     name: Signed release AAB and APK
