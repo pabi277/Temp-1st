@@ -64,8 +64,19 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDebug 2>&1 | tee /tmp/gradle.log
           rc=${PIPESTATUS[0]}
+          printf '::error::LOG_BYTES %s TRAILING\n' "$(wc -c < /tmp/gradle.log)"
           if [ "$rc" -ne 0 ]; then
-            grep -E "FAILURE:|What went wrong|BUILD FAILED|^e: |error:|Caused by:|Unresolved reference|Could not|unsupported|Inconsistent" /tmp/gradle.log | head -22 | sed 's/%/%25/g; s/[|]/ /g; s/\r//g' | awk '{ print "::error::" $0 }'
+            # grep-based patterns produced nothing last run, so ship the raw log tail
+            # out-of-band: base64 has no CR/LF, survives the annotation format, and is
+            # reassembled locally with `gh api .../annotations`.
+            tail -c 14000 /tmp/gradle.log | base64 -w0 > /tmp/log.b64
+            split -b 1150 /tmp/log.b64 /tmp/chunk.
+            n=0
+            for f in /tmp/chunk.*; do
+              n=$((n+1))
+              printf '::error::B64_%02d %s\n' "$n" "$(cat "$f")"
+            done
+            printf '::error::B64_COUNT %s\n' "$n"
           fi
           exit "$rc"
 
