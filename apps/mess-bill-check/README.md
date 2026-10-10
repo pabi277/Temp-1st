@@ -50,6 +50,17 @@ the CI workflow only. Release artifacts are built by GitHub Actions. Signing cre
 in protected Actions secrets, not in this repository. See `.github/workflows/ci-build.yml` for the
 actual workflow.
 
+## Try it before a release exists
+
+The debug APK is built by CI on every push and published as the `mess-bill-check-debug-apk`
+artifact of the `Android CI` run — download it from the run page, unzip, install
+(`adb install app-debug.apk`, or copy the APK to the phone and open it). Debug builds are signed
+with Android's shared debug key, so this is not a distribution channel; it exists so a person can
+hold the app before anything is published.
+
+The APK declares no permissions at all — CI verifies that on the built artifact, not just in the
+source, because "it never phoned home" should be a property of what you install.
+
 ## Permissions and data
 
 No sensitive permissions are planned. All app data stays in the app's private storage on the device;
