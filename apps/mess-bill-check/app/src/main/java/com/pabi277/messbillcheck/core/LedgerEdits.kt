@@ -43,6 +43,12 @@ object LedgerEdits {
         return l.copy(meals = without + entry)
     }
 
+    /** Removes the day's row entirely: neither present nor absent, just not logged. */
+    fun clearMeal(l: Ledger, periodId: String, epochDay: Long): Ledger {
+        requireOpen(l, periodId)
+        return l.copy(meals = l.meals.filterNot { it.periodId == periodId && it.epochDay == epochDay })
+    }
+
     fun addCharge(l: Ledger, periodId: String, name: String, amountMinor: Minor, split: SplitRule, note: String = ""): Ledger {
         requireOpen(l, periodId)
         require(name.isNotBlank()) { "charge needs a name" }

@@ -48,6 +48,24 @@ class LedgerEditsTest {
     }
 
     @Test
+    fun `clear removes the row so the day counts as neither present nor absent`() {
+        var l = fresh()
+        l = LedgerEdits.setMeals(l, "p$start", start, 2, false)
+        l = LedgerEdits.clearMeal(l, "p$start", start)
+        assertNull(l.mealOn("p$start", start))
+        val r = Billing.compute(l, "p$start")
+        assertEquals(0, r.daysPresent)
+        assertEquals(0L, r.computedMinor)
+        val closed = LedgerEdits.close(l, "p$start")
+        try {
+            LedgerEdits.clearMeal(closed, "p$start", start)
+            fail("clearing a day in a closed month must be refused")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("closed"))
+        }
+    }
+
+    @Test
     fun `overlapping open periods are refused but closed ones do not block`() {
         try {
             LedgerEdits.newPeriod(fresh(), "Overlap", start + 10, end + 10, 25_000, RateBasis.DAYS_PRESENT, 0, BillRounding.NEAREST, 5)

@@ -39,6 +39,38 @@ object Money {
         return if (negative) "-₹$body" else "₹$body"
     }
 
+    /**
+     * Accepts `250`, `250.5`, `250.50`, `₹1,234.50` or `1,234` and returns paise.
+     * Returns null for anything ambiguous, including three decimal digits, so a typo is
+     * never silently reinterpreted as a different amount.
+     */
+    fun parseRupees(text: String): Minor? {
+        val cleaned = text.trim()
+            .removePrefix("\u20B9")
+            .replace(",", "")
+            .replace(" ", "")
+        if (cleaned.isEmpty()) return null
+        val negative = cleaned.startsWith("-")
+        val body = if (negative) cleaned.removePrefix("-") else cleaned
+        if (body.isEmpty() || !body.all { it.isDigit() || it == '.' }) return null
+        val parts = body.split('.')
+        if (parts.size > 2) return null
+        val rupees = parts[0].ifEmpty { "0" }.toLongOrNull() ?: return null
+        if (parts[0].length > 12) return null
+        var minor = rupees * PAISE_PER_RUPEE
+        if (parts.size == 2) {
+            val frac = parts[1]
+            if (frac.length > 2) return null
+            val paise = when (frac.length) {
+                0 -> 0L
+                1 -> frac.toLong() * 10
+                else -> frac.toLong()
+            }
+            minor += paise
+        }
+        return if (negative) -minor else minor
+    }
+
     private fun groupIndian(rupees: Long): String {
         val s = rupees.toString()
         if (s.length <= 3) return s
