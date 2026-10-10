@@ -69,20 +69,12 @@ jobs:
           ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDebug 2>&1 | tee /tmp/gradle.log
           rc=${PIPESTATUS[0]}
           set -e
-          printf '::error::LOG_BYTES %s TRAILING\n' "$(wc -c < /tmp/gradle.log)"
-          if [ "$rc" -ne 0 ]; then
-            # grep-based patterns produced nothing last run, so ship the raw log tail
-            # out-of-band: base64 has no CR/LF, survives the annotation format, and is
-            # reassembled locally with `gh api .../annotations`.
-            tail -c 14000 /tmp/gradle.log | base64 -w0 > /tmp/log.b64
-            split -b 1150 /tmp/log.b64 /tmp/chunk.
-            n=0
-            for f in /tmp/chunk.*; do
-              n=$((n+1))
-              printf '::error::B64_%02d %s\n' "$n" "$(cat "$f")"
-            done
-            printf '::error::B64_COUNT %s\n' "$n"
-          fi
+          printf '::error::LOG_BYTES %s CHARS\n' "$(wc -c < /tmp/gradle.log)"
+          tail -c 9000 /tmp/gradle.log | tr -d '\000-\010' | gzip -9 | base64 -w0 > /tmp/log.b64g
+          printf '::error::GZ_TOTAL %s\n' "$(wc -c < /tmp/log.b64g)"
+          fold -w850 /tmp/log.b64g | head -6 | nl -ba | while IFS=$'\t' read -r n body; do
+            printf '::error::GZ%02d %s\n' "$n" "$body"
+          done
           exit "$rc"
 
       - name: Confirm the debug artifact exists
