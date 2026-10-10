@@ -46,6 +46,15 @@ if (!keystorePath.isNullOrBlank()) {
     android.buildTypes.getByName("release").signingConfig = android.signingConfigs.getByName("release")
 }
 
+tasks.withType<Test>().configureEach {
+    testLogging {
+        events("failed", "skipped")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showExceptions = true
+        showCauses = true
+    }
+}
+
 dependencies {
     // No androidx and no SDKs in the skeleton: v1 is offline by construction, and the
     // fewer third-party coordinates here, the fewer privacy/licensing claims to keep

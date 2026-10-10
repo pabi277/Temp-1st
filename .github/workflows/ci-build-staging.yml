@@ -78,7 +78,7 @@ jobs:
         run: |
           set +e
           printf '::error::LOG_BYTES %s\n' "$(wc -c < /tmp/gradle.log 2>/dev/null || echo 0)"
-          tail -c 9000 /tmp/gradle.log 2>/dev/null | tr -d '\000-\010' | gzip -9 | base64 -w0 > /tmp/log.b64g
+          { grep -E "FAILED|AssertionError|expected:|^e: |What went wrong|Caused by" /tmp/gradle.log 2>/dev/null | head -60; tail -c 4000 /tmp/gradle.log 2>/dev/null; } | tr -d '\000-\010' | gzip -9 | base64 -w0 > /tmp/log.b64g
           fold -w850 /tmp/log.b64g | head -6 | nl -ba | while IFS=$'\t' read -r n body; do
             printf '::error::GZ%02d %s\n' "$n" "$body"
           done

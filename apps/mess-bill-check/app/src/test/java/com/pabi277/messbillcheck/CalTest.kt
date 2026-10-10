@@ -48,13 +48,13 @@ class CalTest {
     fun `weekday of known dates`() {
         assertEquals(3, Cal.weekday(Cal.epochDay(1970, 1, 1))) // Thursday
         assertEquals(6, Cal.weekday(Cal.epochDay(2026, 10, 11))) // Sunday
-        assertEquals(1, Cal.weekday(Cal.epochDay(2026, 10, 12))) // Monday
+        assertEquals(0, Cal.weekday(Cal.epochDay(2026, 10, 12))) // Monday is index 0
     }
 
     @Test
     fun `day of year across a leap boundary`() {
         assertEquals(1, Cal.dayOfYear(2026, 1, 1))
-        assertEquals(60, Cal.dayOfYear(2024, 3, 1))
-        assertEquals(59, Cal.dayOfYear(2026, 3, 1))
+        assertEquals(61, Cal.dayOfYear(2024, 3, 1)) // 31 + 29 + 1
+        assertEquals(60, Cal.dayOfYear(2026, 3, 1)) // 31 + 28 + 1
     }
 }

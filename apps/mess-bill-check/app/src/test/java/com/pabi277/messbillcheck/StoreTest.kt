@@ -117,16 +117,22 @@ class StoreTest {
         val dir = folder.newFolder("mutate")
         seed(dir)
         val store = LedgerStore(dir)
+        var failure: Throwable? = null
         val threads = (1..4).map { n ->
             Thread {
-                runCatching {
+                try {
                     store.mutate { LedgerEdits.addTxn(it, id, start + n, DepositKind.PAYMENT, 1_000L + n) }
+                } catch (e: Throwable) {
+                    failure = e
                 }
             }.apply { start() }
         }
         threads.forEach { it.join() }
-        assertEquals(5, store.load().txnsOf(id).size)
-        assertEquals(5, store.load().txns.size)
-        assertTrue(store.load().txns.map { it.amountMinor }.toSet().size >= 1)
+        // seed() records no transactions, so four serialized mutate calls mean exactly four.
+        val loaded = store.load()
+        assertEquals(4, loaded.txnsOf(id).size)
+        assertEquals(4, loaded.txns.size)
+        assertEquals(setOf(1_001L, 1_002L, 1_003L, 1_004L), loaded.txns.map { it.amountMinor }.toSet())
+        assertTrue("worker failed: ${failure}", failure == null)
     }
 }

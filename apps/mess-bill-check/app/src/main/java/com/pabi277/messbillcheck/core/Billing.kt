@@ -38,7 +38,9 @@ object Billing {
 
     /** Consecutive leave runs of at least `minDays` days are the only rebate-eligible days. */
     fun rebateDays(leaveDays: Set<Long>, startDay: Long, endDay: Long, minDays: Int): Int {
-        if (minDays <= 0 || leaveDays.isEmpty()) return 0
+        if (leaveDays.isEmpty()) return 0
+        // "no minimum" means every leave day counts, so the run length needed is 1.
+        val needed = if (minDays <= 0) 1 else minDays
         var rebate = 0
         var run = 0
         var day = startDay
@@ -46,12 +48,12 @@ object Billing {
             if (leaveDays.contains(day)) {
                 run += 1
             } else {
-                if (run >= minDays) rebate += run
+                if (run >= needed) rebate += run
                 run = 0
             }
             day += 1
         }
-        if (run >= minDays) rebate += run
+        if (run >= needed) rebate += run
         return rebate
     }
 

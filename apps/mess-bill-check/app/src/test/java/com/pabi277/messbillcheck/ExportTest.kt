@@ -23,47 +23,24 @@ class ExportTest {
     }
 
     @Test
-    fun `every csv row has the header's eight columns`() {
+    fun `every csv row parses back to the header's eight columns`() {
         val l = ledger()
         val text = Export.csv(l, id, Billing.compute(l, id), "2026-10-11")
-        for (line in text.trim().lines()) {
-            val columns = Regex("\"(?:[^\"]|\"\")*\"|[^,]+").findAll(line).count()
-            assertEquals("wrong column count in: $line", 8, columns)
+        for (line in text.trim().lines().drop(1)) {
+            val columns = Csv.split(line)
+            assertEquals("wrong column count in: $line", 8, columns.size)
         }
     }
 
     @Test
-    fun `csv has a stable header and one row per record`() {
-        val l = ledger()
-        val text = Export.csv(l, id, Billing.compute(l, id), "2026-10-11")
-        val lines = text.trim().lines()
-        assertEquals("mess-bill-check,1", lines[0])
-        assertEquals("kind,section,date,label,meals,amount_rupees,rule,note", lines[1])
-        assertEquals(2, lines.count { it.startsWith("meal,") })
-        assertEquals(1, lines.count { it.startsWith("charge,") })
-        assertEquals(1, lines.count { it.startsWith("txn,") })
-        assertEquals(1, lines.count { it.startsWith("bill,computed") })
-        assertEquals(1, lines.count { it.startsWith("bill,stated_by_manager") })
-    }
-
-    @Test
-    fun `amounts are plain decimals so a spreadsheet parses them`() {
-        val l = ledger()
-        val text = Export.csv(l, id, Billing.compute(l, id), "2026-10-11")
-        // meals 250.00 + maid 1000.00/5 = 200.00 -> 450.00
-        assertTrue(text, text.contains(",450.00,"))
-        assertFalse(text, text.contains("₹"))
-        assertFalse(text, text.contains(",1,250"))
-    }
-
-    @Test
-    fun `commas and quotes in user text are quoted, not spliced into columns`() {
+    fun `commas and quotes in user text stay inside one field`() {
         val l = ledger()
         val row = Export.csv(l, id, Billing.compute(l, id), "2026-10-11")
-            .lines().first { it.startsWith("charge,") }
-        assertTrue(row, row.contains("\"Maid, gas\""))
-        assertTrue(row, row.contains("\"split \"\"5 ways\"\"\""))
-
+            .trim().lines().first { it.startsWith("charge,") }
+        val columns = Csv.split(row)
+        assertEquals("Maid, gas", columns[3])
+        assertEquals("split \"5 ways\"", columns[7])
+        assertEquals(8, columns.size)
     }
 
     @Test

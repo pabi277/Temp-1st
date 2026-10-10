@@ -12,9 +12,10 @@ class JsonTest {
         val text = """{"a":1,"b":[true,null,"x"],"c":{"d":-4.5}}"""
         val v = JsonIo.parse(text)
         assertEquals(1L, v.long("a"))
-        assertEquals(2, v.arr("b").size)
+        assertEquals(3, v.arr("b").size) // true, null, "x"
         assertEquals(true, (v.arr("b")[0] as Json.Bool).value)
-        assertEquals("x", (v.arr("b")[1] as Json.Str).value)
+        assertEquals(Json.Null, v.arr("b")[1])
+        assertEquals("x", (v.arr("b")[2] as Json.Str).value)
         assertEquals("-4.5", v.obj("c")!!.raw("d"))
         assertEquals(text, JsonIo.write(v).replace(" ", ""))
     }
