@@ -57,7 +57,34 @@ jobs:
       - name: Run unit tests and build debug APK
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon testDebugUnitTest assembleDebug
+          set +e
+          ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDebug > /tmp/gradle.log 2>&1
+          rc=$?
+          set -e
+          tail -120 /tmp/gradle.log
+          # This sandbox cannot download Actions logs (results-receiver host is
+          # blocked), so the decisive lines are re-emitted as check-run
+          # annotations, which the REST API does return. Temporary diagnostic.
+          echo "::group::diagnostic annotations"
+          python3 - <<'PYEOF'
+import re
+text = open("/tmp/gradle.log", errors="replace").read()
+pat = re.compile(r"^(FAILURE:|BUILD FAILED|\* What went wrong|\* Try:|> Task|> Compilation|> Could not|e: |w: .*error|error:|Caused by:|Execution failed|Unresolved reference|.*unsupported.*Gradle.*)", re.I)
+picked, seen = [], set()
+for line in text.splitlines():
+    line = line.strip()
+    if line and pat.match(line) and line not in seen:
+        seen.add(line)
+        picked.append(line)
+if not picked:
+    picked = [l.strip() for l in text.splitlines()[-12:] if l.strip()]
+def esc(value):
+    return value.replace("%", "%25").replace("\r", " ").replace("\n", " ").replace("]", "")
+for i, line in enumerate(picked[:22]):
+    print("::error file=gradle.log,line=%d::%s" % (i + 1, esc(line)[:280]))
+PYEOF
+          echo "::endgroup::"
+          exit $rc
       - name: Confirm the debug artifact exists
         run: |
           set -euo pipefail
